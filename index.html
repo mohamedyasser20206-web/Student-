@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>نظام إدارة وتحليل نتائج الطلاب</title>
+<style>
+  :root {
+    --bg:#f6f7f9; --fg:#1a1a1a; --card:#ffffff; --muted:#6b7280; --border:#d9dde3;
+    --accent:#0f766e; --accent-fg:#ffffff; --ok:#15803d; --bad:#b91c1c; --warn:#b45309;
+    box-sizing:border-box;
+    padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg:#0e1116; --fg:#e8eaed; --card:#171b22; --muted:#9aa3af; --border:#2b323c; --accent:#2dd4bf; --accent-fg:#06201d; --ok:#4ade80; --bad:#f87171; --warn:#fbbf24; }
+  }
+  :root[data-theme="dark"] { --bg:#0e1116; --fg:#e8eaed; --card:#171b22; --muted:#9aa3af; --border:#2b323c; --accent:#2dd4bf; --accent-fg:#06201d; --ok:#4ade80; --bad:#f87171; --warn:#fbbf24; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font-family:system-ui,"Segoe UI",Tahoma,sans-serif; line-height:1.6; }
+  .wrap { max-width:760px; margin:0 auto; padding:16px; }
+  h1 { font-size:1.3rem; margin:4px 0 14px; color:var(--accent); }
+  h2 { font-size:1.05rem; margin:0 0 10px; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:14px; margin-bottom:14px; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .grid .full { grid-column:1 / -1; }
+  label { display:block; font-size:.8rem; color:var(--muted); margin-bottom:3px; }
+  input { width:100%; padding:10px; font-size:1rem; border:1px solid var(--border); border-radius:8px; background:var(--bg); color:var(--fg); font-family:inherit; }
+  input:focus { outline:2px solid var(--accent); }
+  button { font-family:inherit; font-size:.95rem; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--card); color:var(--fg); cursor:pointer; }
+  button.primary { background:var(--accent); color:var(--accent-fg); border-color:var(--accent); font-weight:600; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+  .err { color:var(--bad); font-size:.85rem; margin-top:8px; min-height:1.2em; }
+  .scroll { overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; font-size:.9rem; min-width:520px; }
+  th, td { padding:8px 6px; text-align:center; border-bottom:1px solid var(--border); white-space:nowrap; }
+  th { color:var(--muted); font-weight:600; font-size:.8rem; }
+  td.name { text-align:right; font-weight:600; }
+  .pass { color:var(--ok); font-weight:600; }
+  .review { color:var(--bad); font-weight:600; }
+  .del { padding:4px 8px; font-size:.8rem; color:var(--bad); }
+  .stat { display:flex; justify-content:space-between; align-items:center; padding:12px; border-radius:10px; background:var(--bg); border:1px solid var(--border); margin-top:10px; }
+  .stat b { font-size:1.4rem; color:var(--accent); }
+  .empty { color:var(--muted); text-align:center; padding:14px 0; font-size:.9rem; }
+  .note { font-size:.8rem; color:var(--muted); margin-top:8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🎓 نظام إدارة وتحليل نتائج الطلاب</h1>
+
+  <div class="card">
+    <h2>إضافة طالب</h2>
+    <div class="grid">
+      <div><label for="id">رقم الجلوس</label><input id="id" type="number" inputmode="numeric" placeholder="1005"></div>
+      <div><label for="name">الاسم</label><input id="name" type="text" placeholder="اسم الطالب"></div>
+      <div><label for="g1">درجة المادة 1</label><input id="g1" type="number" inputmode="decimal" min="0" max="100" placeholder="0 - 100"></div>
+      <div><label for="g2">درجة المادة 2</label><input id="g2" type="number" inputmode="decimal" min="0" max="100" placeholder="0 - 100"></div>
+      <div><label for="g3">درجة المادة 3</label><input id="g3" type="number" inputmode="decimal" min="0" max="100" placeholder="0 - 100"></div>
+      <div><label for="att">نسبة الحضور %</label><input id="att" type="number" inputmode="decimal" min="0" max="100" placeholder="0 - 100"></div>
+    </div>
+    <div class="err" id="err"></div>
+    <div class="row">
+      <button class="primary" id="addBtn">إضافة الطالب</button>
+      <button id="sampleBtn">تحميل بيانات تجريبية</button>
+      <button id="clearBtn">مسح الكل</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>تقرير الطلاب</h2>
+    <div class="scroll"><table>
+      <thead><tr><th>الاسم</th><th>رقم الجلوس</th><th>المتوسط</th><th>التقدير</th><th>الحضور</th><th>النتيجة</th><th></th></tr></thead>
+      <tbody id="report"></tbody>
+    </table></div>
+    <div class="empty" id="reportEmpty">لا يوجد طلاب بعد. أضف طالبًا أو حمّل بيانات تجريبية.</div>
+  </div>
+
+  <div class="card">
+    <h2>لجنة الرأفة (+5 درجات لمن متوسطه بين 40 و49)</h2>
+    <div class="scroll"><table>
+      <thead><tr><th>الاسم</th><th>المتوسط قبل</th><th>المتوسط بعد</th></tr></thead>
+      <tbody id="curved"></tbody>
+    </table></div>
+    <div class="empty" id="curvedEmpty">لا يوجد طلاب متعثرون.</div>
+    <div class="stat"><span>متوسط المتعثرين بعد التعديل</span><b id="leniency">0.00</b></div>
+    <div class="note">إذا لم يوجد متعثرون يظهر 0 (حماية من القسمة على صفر).</div>
+  </div>
+</div>
+
+<script>
+  // 1. كلاس الطالب
+  class Student {
+    constructor(id, name, grades, attendance) {
+      this.id = id;
+      this.name = name;
+      this.grades = grades;
+      this.attendance = attendance;
+    }
+    calcAverage() {
+      const total = this.grades.reduce((sum, g) => sum + g, 0);
+      return total / this.grades.length;
+    }
+    getGrade(avg) {
+      if (avg >= 90) return "A";
+      else if (avg >= 80) return "B";
+      else if (avg >= 70) return "C";
+      else if (avg >= 60) return "D";
+      else if (avg >= 50) return "E";
+      else return "F";
+    }
+    getResult() {
+      const avg = this.calcAverage();
+      return (avg >= 50 && this.attendance >= 75) ? "ناجح" : "يحتاج مراجعة";
+    }
+  }
+
+  // 2. المصفوفة الرئيسية
+  let studentsList = [];
+
+  const $ = id => document.getElementById(id);
+
+  function sample() {
+    studentsList = [
+      new Student(1001, "أحمد", [90, 85, 95], 95),
+      new Student(1002, "سارة", [45, 40, 50], 80),
+      new Student(1003, "محمود", [42, 48, 44], 70),
+      new Student(1004, "منى", [70, 65, 75], 60)
+    ];
+    render();
+  }
+
+  function addStudent() {
+    const err = $("err");
+    err.textContent = "";
+    const id = $("id").value.trim();
+    const name = $("name").value.trim();
+    const grades = ["g1", "g2", "g3"].map(k => parseFloat($(k).value));
+    const att = parseFloat($("att").value);
+
+    if (!id || !name) { err.textContent = "من فضلك أدخل رقم الجلوس والاسم."; return; }
+    if (grades.some(g => isNaN(g) || g < 0 || g > 100)) { err.textContent = "الدرجات لازم تكون من 0 إلى 100."; return; }
+    if (isNaN(att) || att < 0 || att > 100) { err.textContent = "نسبة الحضور لازم تكون من 0 إلى 100."; return; }
+    if (studentsList.some(s => String(s.id) === id)) { err.textContent = "رقم الجلوس موجود بالفعل."; return; }
+
+    studentsList.push(new Student(id, name, grades, att));
+    ["id", "name", "g1", "g2", "g3", "att"].forEach(k => $(k).value = "");
+    render();
+  }
+
+  function removeStudent(index) {
+    studentsList = studentsList.filter((_, i) => i !== index);
+    render();
+  }
+
+  function esc(t) {
+    return String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  }
+
+  function render() {
+    // تقرير كل طالب
+    $("report").innerHTML = studentsList.map((s, i) => {
+      const avg = s.calcAverage();
+      const result = s.getResult();
+      return `<tr>
+        <td class="name">${esc(s.name)}</td>
+        <td>${esc(s.id)}</td>
+        <td>${avg.toFixed(2)}</td>
+        <td>${s.getGrade(avg)}</td>
+        <td>${s.attendance}%</td>
+        <td class="${result === "ناجح" ? "pass" : "review"}">${result}</td>
+        <td><button class="del" data-i="${i}">حذف</button></td>
+      </tr>`;
+    }).join("");
+    $("reportEmpty").style.display = studentsList.length ? "none" : "block";
+
+    // لجنة الرأفة
+    const struggling = studentsList.filter(s => {
+      const avg = s.calcAverage();
+      return avg >= 40 && avg <= 49;
+    });
+    const curved = struggling.map(s => ({
+      id: s.id, name: s.name,
+      oldAverage: s.calcAverage(),
+      newAverage: s.calcAverage() + 5
+    }));
+    const total = curved.reduce((sum, s) => sum + s.newAverage, 0);
+    const leniency = curved.length > 0 ? total / curved.length : 0;
+
+    $("curved").innerHTML = curved.map(s => `<tr>
+      <td class="name">${esc(s.name)}</td>
+      <td>${s.oldAverage.toFixed(2)}</td>
+      <td class="pass">${s.newAverage.toFixed(2)}</td>
+    </tr>`).join("");
+    $("curvedEmpty").style.display = curved.length ? "none" : "block";
+    $("leniency").textContent = leniency.toFixed(2);
+
+    // نفس المخرجات في الـ Console
+    console.log("===== تقرير الطلاب =====");
+    studentsList.forEach(s => {
+      const avg = s.calcAverage();
+      console.log(`الاسم: ${s.name} | المتوسط: ${avg.toFixed(2)} | التقدير: ${s.getGrade(avg)} | النتيجة: ${s.getResult()}`);
+    });
+    console.log("===== الطلاب المتعثرون بعد الرأفة =====", curved);
+    console.log("===== متوسط المتعثرين بعد التعديل =====", leniency.toFixed(2));
+  }
+
+  $("addBtn").addEventListener("click", addStudent);
+  $("sampleBtn").addEventListener("click", sample);
+  $("clearBtn").addEventListener("click", () => { studentsList = []; render(); });
+  $("report").addEventListener("click", e => {
+    const b = e.target.closest("button[data-i]");
+    if (b) removeStudent(Number(b.dataset.i));
+  });
+
+  sample();
+</script>
+</body>
+</html>
